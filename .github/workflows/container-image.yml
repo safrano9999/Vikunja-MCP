@@ -114,7 +114,7 @@ jobs:
             if docker exec "$container_id" wget -qO- http://127.0.0.1:3456/api/v1/info >/dev/null \
               && docker exec "$container_id" wget -qO- http://127.0.0.1:8000/healthz | grep -qx ok; then
               code="$({ docker exec "$container_id" wget -qSO- \
-                --post-data='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+                --post-data='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
                 --header='Content-Type: application/json' \
                 http://127.0.0.1:8000/mcp || true; } \
                 2>&1 >/dev/null | awk '/HTTP\//{print $2; exit}')"
