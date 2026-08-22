@@ -1,0 +1,18 @@
+#CONTAINER-NAME
+CONTAINER_NAME=vikunja-mcp
+
+# Container port block: TUN disables host publishing; Caddy and uCore use Network=rafael.
+#default-preset: TUN
+CONTAINER_NR=TUN
+
+# Use the image supervisor for Vikunja and the MCP bridge.
+#container-command: image
+
+#default-preset: ${CONTAINER_NAME}-files:/app/vikunja/files:Z
+#required: Vikunja uploaded files
+VIKUNJA_VOLUMES=${CONTAINER_NAME}-files:/app/vikunja/files:Z
+
+#repeat-group: ADDITIONAL_LINE suffix02 ADDITIONAL_LINE
+#repeat-freeform: ADDITIONAL_LINE
+#default-preset: Network=rafael
+ADDITIONAL_LINE=Network=rafael
