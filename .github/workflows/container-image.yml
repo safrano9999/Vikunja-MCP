@@ -103,6 +103,7 @@ jobs:
             -e VIKUNJA_DATABASE_TYPE=sqlite \
             -e VIKUNJA_DATABASE_PATH=/tmp/vikunja-ci.db \
             -e VIKUNJA_SERVICE_SECRET=ci-only-secret \
+            -e VIKUNJA_SERVICE_PUBLICURL=http://127.0.0.1:3456/ \
             "$image")"
           trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
           for attempt in $(seq 1 45); do
