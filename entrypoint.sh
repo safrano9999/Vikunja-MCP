@@ -24,8 +24,9 @@ stop() {
 }
 trap 'stop; exit 143' TERM
 trap 'stop; exit 130' INT
+while kill -0 "$vikunja_pid" 2>/dev/null && kill -0 "$mcp_pid" 2>/dev/null; do sleep 1; done
 set +e
-wait -n "$vikunja_pid" "$mcp_pid"
+if ! kill -0 "$vikunja_pid" 2>/dev/null; then wait "$vikunja_pid"; else wait "$mcp_pid"; fi
 status=$?
 set -e
 stop
