@@ -112,7 +112,8 @@ jobs:
               exit 1
             fi
             if docker exec "$container_id" wget -qO- http://127.0.0.1:3456/api/v1/info >/dev/null \
-              && docker exec "$container_id" wget -qO- http://127.0.0.1:8000/healthz | grep -qx ok; then
+              && docker exec "$container_id" wget -qO- http://127.0.0.1:8000/healthz | grep -qx ok \
+              && docker exec "$container_id" grep -Fq "this.request('/tasks', 'GET'" /opt/vikunja-mcp/node_modules/node-vikunja/dist/esm/services/task.service.js; then
               code="$({ docker exec "$container_id" wget -qSO- \
                 --post-data='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
                 --header='Content-Type: application/json' \

@@ -9,6 +9,7 @@ FROM ${NODE_IMAGE} AS builder
 ARG VIKUNJA_MCP_REVISION=a42e1c2a3bd2b694e79a944fba5153970157b19d
 ARG SUPERGATEWAY_REVISION=973c4595250dcd59da83c12c4f11ff653b6cd4f0
 RUN apk add --no-cache git python3 make g++
+COPY .github/scripts/patch-vikunja-mcp.py /usr/local/bin/patch-vikunja-mcp.py
 
 WORKDIR /src/vikunja-mcp
 RUN git init \
@@ -17,6 +18,7 @@ RUN git init \
     && git checkout --detach FETCH_HEAD \
     && test "$(git rev-parse HEAD)" = "${VIKUNJA_MCP_REVISION}" \
     && npm ci \
+    && python3 /usr/local/bin/patch-vikunja-mcp.py node_modules/node-vikunja/dist/esm/services/task.service.js \
     && npm run build \
     && npm prune --omit=dev
 
