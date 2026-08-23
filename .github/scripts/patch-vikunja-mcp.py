@@ -57,6 +57,12 @@ task = replace_once(
 
 teams = replace_once(
     teams,
+    "import type { Team } from 'node-vikunja';",
+    "import type { Team, JSONObject } from 'node-vikunja';",
+    "node-vikunja JSON types",
+)
+teams = replace_once(
+    teams,
     """interface TeamListParams {
   page?: number;
   per_page?: number;
@@ -69,7 +75,7 @@ teams = replace_once(
   s?: string;
 }
 
-interface TeamMemberView {
+interface TeamMemberView extends JSONObject {
   id: number;
   username: string;
   admin: boolean;
