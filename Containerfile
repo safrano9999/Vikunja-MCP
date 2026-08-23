@@ -18,7 +18,7 @@ RUN git init \
     && git checkout --detach FETCH_HEAD \
     && test "$(git rev-parse HEAD)" = "${VIKUNJA_MCP_REVISION}" \
     && npm ci \
-    && python3 /usr/local/bin/patch-vikunja-mcp.py node_modules/node-vikunja/dist/esm/services/task.service.js \
+    && python3 /usr/local/bin/patch-vikunja-mcp.py . \
     && npm run build \
     && npm prune --omit=dev
 
