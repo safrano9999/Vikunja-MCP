@@ -7,6 +7,8 @@ from pathlib import Path
 
 TASK_SHA256 = "a77217ee683187458d91246e2d3986543d04323e39b8595468ff8a2324daf515"
 TEAMS_SHA256 = "b8a3d8c0407ee04076359bdd2618dfb3f5ca2952b345c51bda529821c1c8a8ea"
+BULK_OPERATIONS_SHA256 = "62d27244fa4a4da23b291ef0414e0fc4f2aa275194b87e21bd5e37e67b8ec585"
+TASK_BULK_SHA256 = "7082b29aaebbc56ab4dc2365c0424d2f54f283897133eab38c4c57a8abd8b012"
 
 
 def checked_source(path: Path, expected: str) -> str:
@@ -45,8 +47,12 @@ if len(sys.argv) != 2:
 root = Path(sys.argv[1])
 task_path = root / "node_modules/node-vikunja/dist/esm/services/task.service.js"
 teams_path = root / "src/tools/teams.ts"
+bulk_operations_path = root / "src/tools/tasks/bulk-operations-simplified.ts"
+task_bulk_path = root / "src/tools/task-bulk.ts"
 task = checked_source(task_path, TASK_SHA256)
 teams = checked_source(teams_path, TEAMS_SHA256)
+bulk_operations = checked_source(bulk_operations_path, BULK_OPERATIONS_SHA256)
+task_bulk = checked_source(task_bulk_path, TASK_BULK_SHA256)
 
 task = replace_once(
     task,
@@ -357,6 +363,22 @@ teams = replace_once(
 teams = replace_once(teams, "{ message: result },", "{ message: result.message },", "member removal message")
 teams = replace_count(teams, "${session.apiUrl}/teams", "${apiUrl}/teams", 6, "normalized API URLs")
 
+bulk_operations = replace_once(
+    bulk_operations,
+    "create: new BatchProcessor({ maxConcurrency: 8, batchSize: 15, enableMetrics: true, batchDelay: 0 })",
+    "create: new BatchProcessor({ maxConcurrency: 1, batchSize: 15, enableMetrics: true, batchDelay: 0 })",
+    "serialize task creation",
+)
+task_bulk = replace_once(
+    task_bulk,
+    "const filteredTask: { title: string; description?: string; due_date?: string; priority?: number; labels?: number[]; assignees?: number[]; repeat_after?: number; repeat_mode?: 'day' | 'week' | 'month' | 'year' }",
+    "const filteredTask: { title: string; description?: string; dueDate?: string; priority?: number; labels?: number[]; assignees?: number[]; repeatAfter?: number; repeatMode?: 'day' | 'week' | 'month' | 'year' }",
+    "bulk task field types",
+)
+task_bulk = replace_once(task_bulk, "filteredTask.due_date = task.dueDate", "filteredTask.dueDate = task.dueDate", "bulk due date")
+task_bulk = replace_once(task_bulk, "filteredTask.repeat_after = task.repeatAfter", "filteredTask.repeatAfter = task.repeatAfter", "bulk repeat interval")
+task_bulk = replace_once(task_bulk, "filteredTask.repeat_mode = task.repeatMode", "filteredTask.repeatMode = task.repeatMode", "bulk repeat mode")
+
 required = (
     "username: z.string().min(1).max(250).optional()",
     "is_public: args.isPublic ?? currentTeam.is_public ?? false",
@@ -372,7 +394,14 @@ for stale in ("userId", "method: 'PUT',\n              headers"):
         raise SystemExit(f"stale team implementation remains: {stale!r}")
 if task.count("this.request('/tasks', 'GET'") != 1:
     raise SystemExit("task route patch postcondition failed")
+if bulk_operations.count("create: new BatchProcessor({ maxConcurrency: 1") != 1:
+    raise SystemExit("bulk create serialization postcondition failed")
+for needle in ("filteredTask.dueDate", "filteredTask.repeatAfter", "filteredTask.repeatMode"):
+    if task_bulk.count(needle) != 1:
+        raise SystemExit(f"bulk task field postcondition failed: {needle!r}")
 
-# Both transformations are validated before either source file is changed.
+# All transformations are validated before any source file is changed.
 task_path.write_text(task)
 teams_path.write_text(teams)
+bulk_operations_path.write_text(bulk_operations)
+task_bulk_path.write_text(task_bulk)
