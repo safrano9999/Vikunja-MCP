@@ -60,9 +60,6 @@ jobs:
             echo "version=$version"
             echo "tags<<EOF"
             echo "${IMAGE_NAME}:${version}"
-            if [ "${{ inputs.push_latest }}" = true ]; then
-              echo "${IMAGE_NAME}:latest"
-            fi
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -80,16 +77,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Build and publish
+      - name: Build candidate
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Containerfile
+          file: .github/scripts/Containerfile
           platforms: linux/amd64
           pull: true
           no-cache: true
           push: true
           tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            io.safrano9999.build.commit=${{ github.sha }}
 
       - name: Smoke-test published image
         env:
@@ -97,7 +97,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          image="${IMAGE_NAME}:${IMAGE_TAG}"
+          image="${IMAGE_NAME}@${{ steps.build.outputs.digest }}"
           docker pull "$image"
           container_id="$(docker run -d \
             -e VIKUNJA_DATABASE_TYPE=sqlite \
@@ -122,9 +122,17 @@ jobs:
                 http://127.0.0.1:8000/mcp || true; } \
                 2>&1 >/dev/null | awk '/HTTP\//{print $2; exit}')"
               test "$code" = 401
+              docker cp .github/scripts/verify-runtime.mjs "$container_id:/tmp/verify-runtime.mjs"
+              docker exec "$container_id" node /tmp/verify-runtime.mjs
               exit 0
             fi
             sleep 1
           done
           docker logs "$container_id"
           exit 1
+
+      - name: Promote tested latest
+        if: ${{ inputs.push_latest }}
+        env:
+          CANDIDATE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: docker buildx imagetools create --tag "${IMAGE_NAME}:latest" "${IMAGE_NAME}@${CANDIDATE_DIGEST}"
